@@ -4,6 +4,8 @@ const bodyParser = require("body-parser");
 // load our own helper functions
 const encode = require("./demo/encode");
 const decode = require("./demo/decode");
+const atob = require("atob");
+const btoa = require("btoa");
 
 const existingURLs = [
   { id: "1", url: "www.google.com", hash: "MQ==" },
@@ -29,20 +31,38 @@ app.post("/shorten-url", function(req, res) {
   };
   existingURLs.push(newURL);
   res.send(
-    `${newURL.id}) ${newURL.url} is created with new hash: ${newURL.hash}`
+    `${newURL.id}) ${newURL.url} is created with new hash: "${newURL.hash}"`
   );
   res.end();
 });
 
 app.post("/expand-url", function(req, res) {
   const hashUrl = req.body.hash;
+  let decodedResult = atob(hashUrl);
   try {
-    let decodedResult = decode(hashUrl, existingURLs);
+    res.status(200);
+    res.send(`URL found: "${existingURLs[decodedResult].url}"`);
   } catch (error) {
     res.status(error.status || 404);
+    res.send(`There is no long URL registered for hash value: ${hashUrl}`);
   }
-  res.send(`There is no long URL registered for hash value "${hashUrl}"`);
   res.end();
+});
+
+app.delete("/expand-url/:hash", function(req, res) {
+  const hashId = req.body.hash;
+  let decodedResult = atob(hashId);
+  try {
+    res.status(200);
+    res.send(
+      `URL with hash value '${
+        existingURLs[decodedResult].url
+      }' deleted successfully.`
+    );
+  } catch (error) {
+    res.status(error.status || 404);
+    res.send(`URL with hash value '${hashId}' does not exist.`);
+  }
 });
 
 // catch 404 and forward to error handler
