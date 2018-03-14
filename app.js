@@ -4,17 +4,16 @@ const bodyParser = require("body-parser");
 // load our own helper functions
 const encode = require("./demo/encode");
 const decode = require("./demo/decode");
-const atob = require("atob");
-const btoa = require("btoa");
-
-const existingURLs = [
-  { id: "1", url: "www.google.com", hash: "MQ==" },
-  { id: "2", url: "www.facebook.com", hash: "Mg==" },
-  { id: "3", url: "www.test.com", hash: "NA==" }
-];
+// const atob = require("atob");
+// const btoa = require("btoa");
 
 const app = express();
 app.use(bodyParser.json());
+
+const existingURLs = [
+  { id: "1", url: "www.google.com", hash: "MQ==" },
+  { id: "2", url: "www.facebook.com", hash: "Mg==" }
+];
 
 // TODO: Implement functionalities specified in README
 app.get("/", function(req, res) {
@@ -38,10 +37,12 @@ app.post("/shorten-url", function(req, res) {
 
 app.post("/expand-url", function(req, res) {
   const hashUrl = req.body.hash;
-  let decodedResult = atob(hashUrl);
   try {
-    res.status(200);
-    res.send(`URL found: "${existingURLs[decodedResult].url}"`);
+    let decodedResult = decode(hashUrl, existingURLs);
+    if (decodedResult !== undefined) {
+      res.send(`URL found: "${decodedResult}"`);
+      res.status(200);
+    }
   } catch (error) {
     res.status(error.status || 404);
     res.send(`There is no long URL registered for hash value: ${hashUrl}`);
@@ -51,15 +52,16 @@ app.post("/expand-url", function(req, res) {
 
 app.delete("/expand-url/:hash", function(req, res) {
   const hashId = req.body.hash;
-  let decodedResult = atob(hashId);
   try {
-    res.status(200);
-    res.send(
-      `URL with hash value '${
-        existingURLs[decodedResult].url
-      }' deleted successfully.`
-    );
+    let decodedResult = decode(hashId, existingURLs);
+    console.log("decodedResult: ", decodedResult);
+    if (decodedResult !== undefined) {
+      console.log("existingURLs: ", existingURLs);
+      res.status(200);
+      res.send(`URL with hash value '${hashId}' deleted successfully.`);
+    }
   } catch (error) {
+    console.log("existingURLs: ", existingURLs);
     res.status(error.status || 404);
     res.send(`URL with hash value '${hashId}' does not exist.`);
   }
