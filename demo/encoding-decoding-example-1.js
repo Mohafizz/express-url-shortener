@@ -5,5 +5,5 @@ const atob = require("atob");
 encodedString = btoa("www.google.com");
 console.log(encodedString);
 
-decodedString = atob(encodedString);
+decodedString = atob("MTAwMDA=");
 console.log(decodedString);

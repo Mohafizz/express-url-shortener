@@ -8,9 +8,7 @@ const Counter = require("./models/counter");
 const URLs = require("./models/urls");
 
 // load our own helper functions
-const encode = require("./demo/encode");
 const btoa = require("btoa");
-const decode = require("./demo/decode");
 const atob = require("atob");
 
 const app = express();
@@ -62,33 +60,20 @@ app.post("/shorten", function(req, res, next) {
   });
 });
 
-app.get("/", async function(req, res, next) {
+app.get("/:hash", async function(req, res, next) {
   try {
-    const urlListing = await URLs.find({}).exec();
-    res.send({
-      message: "List of all URLs in our database...",
-      urlListing
-    });
+    let baseid = req.params.hash;
+    let id = atob(baseid);
+    const urlListing = await URLs.findOne({ _id: id }).exec();
+    if (urlListing) {
+      res.redirect(urlListing.url);
+    } else {
+      res.redirect("/");
+    }
   } catch (err) {
     next(err);
   }
   res.end;
-});
-
-app.get("/:hash", function(req, res, next) {
-  try {
-    let baseid = req.params.hash;
-    let id = atob(baseid);
-    URLs.findOne({ _id: id }, function(err, doc) {
-      if (doc) {
-        res.redirect(doc.url);
-      } else {
-        res.redirect("/");
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
 });
 
 // catch 404 and forward to error handler
