@@ -4,6 +4,8 @@ if (process.env.NODE_ENV !== "production") {
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
+const Counter = require("./models/counter");
+const URLs = require("./models/urls");
 
 // load our own helper functions
 const encode = require("./demo/encode");
@@ -23,27 +25,6 @@ app.get("/", function(req, res) {
   res.send("Hello world!");
 });
 
-app.post("/shorten-url", function(req, res) {
-  const url = req.body.url;
-  console.log("url: ", url);
-  let encodedResult = encode(url, existingURLs);
-  let isAvailable = existingURLs.filter(url => url.url == url);
-  console.log("isAvailable.length: ", isAvailable.length);
-  if (isAvailable.length === 0) {
-    let newURL = {
-      id: Number.parseInt(existingURLs.length) + 1,
-      url: url,
-      hash: encodedResult
-    };
-    existingURLs.push(newURL);
-    console.log("newURL: ", newURL);
-    res.send(
-      `${newURL.id}) ${newURL.url} is created with new hash: "${newURL.hash}"`
-    );
-  }
-  res.end();
-});
-
 app.get("/expand-url", function(req, res) {
   const hashUrl = req.body.hash;
   try {
@@ -55,6 +36,29 @@ app.get("/expand-url", function(req, res) {
   } catch (error) {
     res.status(error.status || 404);
     res.send(`There is no long URL registered for hash value: ${hashUrl}`);
+  }
+  res.end();
+});
+
+app.post("/shorten-url", function(req, res, next) {
+  try {
+    const url = req.body.url;
+    let encodedResult = encode(url, existingURLs);
+    let isAvailable = existingURLs.filter(url => url.url == url);
+    let newURL = {
+      id: Number.parseInt(existingURLs.length - 1) + 1,
+      url: url,
+      hash: encodedResult
+    };
+    existingURLs.push(newURL);
+    console.log("newURL: ", newURL);
+    res.send(
+      `${newURL.id}) ${newURL.url} is sucessfully created with new hash: "${
+        newURL.hash
+      }"`
+    );
+  } catch (error) {
+    next(error);
   }
   res.end();
 });
