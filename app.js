@@ -1,19 +1,22 @@
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").load();
+}
 const express = require("express");
 const bodyParser = require("body-parser");
+const mongoose = require("mongoose");
 
 // load our own helper functions
 const encode = require("./demo/encode");
 const decode = require("./demo/decode");
-// const atob = require("atob");
-// const btoa = require("btoa");
 
 const app = express();
 app.use(bodyParser.json());
 
-const existingURLs = [
-  { id: "1", url: "www.google.com", hash: "MQ==" },
-  { id: "2", url: "www.facebook.com", hash: "Mg==" }
-];
+const existingURLs = [];
+const dbUrl = process.env.MONGODB_URI;
+mongoose.connect(dbUrl, {}).then(async () => {
+  console.log("Connected to mongo database at " + dbUrl);
+});
 
 // TODO: Implement functionalities specified in README
 app.get("/", function(req, res) {
@@ -22,20 +25,26 @@ app.get("/", function(req, res) {
 
 app.post("/shorten-url", function(req, res) {
   const url = req.body.url;
+  console.log("url: ", url);
   let encodedResult = encode(url, existingURLs);
-  let newURL = {
-    id: "3",
-    url: url,
-    hash: encodedResult
-  };
-  existingURLs.push(newURL);
-  res.send(
-    `${newURL.id}) ${newURL.url} is created with new hash: "${newURL.hash}"`
-  );
+  let isAvailable = existingURLs.filter(url => url.url == url);
+  console.log("isAvailable.length: ", isAvailable.length);
+  if (isAvailable.length === 0) {
+    let newURL = {
+      id: Number.parseInt(existingURLs.length) + 1,
+      url: url,
+      hash: encodedResult
+    };
+    existingURLs.push(newURL);
+    console.log("newURL: ", newURL);
+    res.send(
+      `${newURL.id}) ${newURL.url} is created with new hash: "${newURL.hash}"`
+    );
+  }
   res.end();
 });
 
-app.post("/expand-url", function(req, res) {
+app.get("/expand-url", function(req, res) {
   const hashUrl = req.body.hash;
   try {
     let decodedResult = decode(hashUrl, existingURLs);
@@ -54,14 +63,11 @@ app.delete("/expand-url/:hash", function(req, res) {
   const hashId = req.body.hash;
   try {
     let decodedResult = decode(hashId, existingURLs);
-    console.log("decodedResult: ", decodedResult);
     if (decodedResult !== undefined) {
-      console.log("existingURLs: ", existingURLs);
       res.status(200);
       res.send(`URL with hash value '${hashId}' deleted successfully.`);
     }
   } catch (error) {
-    console.log("existingURLs: ", existingURLs);
     res.status(error.status || 404);
     res.send(`URL with hash value '${hashId}' does not exist.`);
   }
