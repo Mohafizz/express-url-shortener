@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const Counter = require("../models/counter");
 
 var urlSchema = new mongoose.Schema({
   _id: { type: Number },

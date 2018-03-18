@@ -9,12 +9,13 @@ const URLs = require("./models/urls");
 
 // load our own helper functions
 const encode = require("./demo/encode");
+const btoa = require("btoa");
 const decode = require("./demo/decode");
+const atob = require("atob");
 
 const app = express();
 app.use(bodyParser.json());
 
-const existingURLs = [];
 const dbUrl = process.env.MONGODB_URI;
 mongoose.connect(dbUrl, {}).then(async () => {
   console.log("Connected to mongo database at " + dbUrl);
@@ -23,7 +24,7 @@ mongoose.connect(dbUrl, {}).then(async () => {
   });
   Counter.remove({}, function() {
     console.log("Counter collection removed");
-    var counter = new Counter({ _id: "url_count", count: 10000 });
+    let counter = new Counter({ _id: "url_count", count: 10000 });
     counter.save(function(err) {
       if (err) return console.error(err);
       console.log("counter inserted");
@@ -31,60 +32,62 @@ mongoose.connect(dbUrl, {}).then(async () => {
   });
 });
 
-// TODO: Implement functionalities specified in README
-app.get("/", function(req, res) {
-  res.send("Hello world!");
-});
-
-app.get("/expand-url", function(req, res) {
-  const hashUrl = req.body.hash;
-  try {
-    let decodedResult = decode(hashUrl, existingURLs);
-    if (decodedResult !== undefined) {
-      res.send(`URL found: "${decodedResult}"`);
-      res.status(200);
+app.post("/shorten", function(req, res, next) {
+  console.log(req.body.url);
+  let urlData = req.body.url;
+  URLs.findOne({ url: urlData }, function(err, doc) {
+    if (doc) {
+      console.log("entry found in db");
+      res.send({
+        url: urlData,
+        hash: btoa(doc._id),
+        status: 200,
+        statusTxt: "OK"
+      });
+    } else {
+      console.log("entry NOT found in db, saving new");
+      let url = new URLs({
+        url: urlData
+      });
+      url.save(function(err) {
+        if (err) return console.error(err);
+        res.send({
+          url: urlData,
+          hash: btoa(url._id),
+          status: 200,
+          statusTxt: "OK"
+        });
+      });
     }
-  } catch (error) {
-    res.status(error.status || 404);
-    res.send(`There is no long URL registered for hash value: ${hashUrl}`);
-  }
-  res.end();
+  });
 });
 
-app.post("/shorten-url", function(req, res, next) {
+app.get("/", async function(req, res, next) {
   try {
-    const url = req.body.url;
-    let encodedResult = encode(url, existingURLs);
-    let isAvailable = existingURLs.filter(url => url.url == url);
-    let newURL = {
-      id: Number.parseInt(existingURLs.length - 1) + 1,
-      url: url,
-      hash: encodedResult
-    };
-    existingURLs.push(newURL);
-    console.log("newURL: ", newURL);
-    res.send(
-      `${newURL.id}) ${newURL.url} is sucessfully created with new hash: "${
-        newURL.hash
-      }"`
-    );
+    const urlListing = await URLs.find({}).exec();
+    res.send({
+      message: "List of all URLs in our database...",
+      urlListing
+    });
+  } catch (err) {
+    next(err);
+  }
+  res.end;
+});
+
+app.get("/:hash", function(req, res, next) {
+  try {
+    let baseid = req.params.hash;
+    let id = atob(baseid);
+    URLs.findOne({ _id: id }, function(err, doc) {
+      if (doc) {
+        res.redirect(doc.url);
+      } else {
+        res.redirect("/");
+      }
+    });
   } catch (error) {
     next(error);
-  }
-  res.end();
-});
-
-app.delete("/expand-url/:hash", function(req, res) {
-  const hashId = req.body.hash;
-  try {
-    let decodedResult = decode(hashId, existingURLs);
-    if (decodedResult !== undefined) {
-      res.status(200);
-      res.send(`URL with hash value '${hashId}' deleted successfully.`);
-    }
-  } catch (error) {
-    res.status(error.status || 404);
-    res.send(`URL with hash value '${hashId}' does not exist.`);
   }
 });
 
