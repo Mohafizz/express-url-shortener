@@ -1,9 +1,5 @@
-if (process.env.NODE_ENV !== "production") {
-  require("dotenv").load();
-}
 const express = require("express");
 const bodyParser = require("body-parser");
-const mongoose = require("mongoose");
 const Counter = require("./models/counter");
 const URLs = require("./models/urls");
 
@@ -14,20 +10,17 @@ const atob = require("atob");
 const app = express();
 app.use(bodyParser.json());
 
-const dbUrl = process.env.MONGODB_URI;
-mongoose.connect(dbUrl, {}).then(async () => {
-  console.log("Connected to mongo database at " + dbUrl);
-  URLs.remove({}, function() {
-    console.log("URL collection removed");
-  });
-  Counter.remove({}, function() {
-    console.log("Counter collection removed");
-    let counter = new Counter({ _id: "url_count", count: 10000 });
-    counter.save(function(err) {
-      if (err) return console.error(err);
-      console.log("counter inserted");
+// Base route for front-end
+app.get("/", async function(req, res, next) {
+  try {
+    const urlListing = await URLs.find({}).exec();
+    res.send({
+      message: "List of all URLs in our database...",
+      urlListing
     });
-  });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.post("/shorten", async function(req, res, next) {
