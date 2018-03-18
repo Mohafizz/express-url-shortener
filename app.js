@@ -30,34 +30,35 @@ mongoose.connect(dbUrl, {}).then(async () => {
   });
 });
 
-app.post("/shorten", function(req, res, next) {
-  console.log(req.body.url);
-  let urlData = req.body.url;
-  URLs.findOne({ url: urlData }, function(err, doc) {
-    if (doc) {
+app.post("/shorten", async function(req, res, next) {
+  try {
+    console.log(req.body.url);
+    let urlData = req.body.url;
+    let searchUrlEntry = await URLs.findOne({ url: urlData }).exec();
+    if (searchUrlEntry) {
       console.log("entry found in db");
       res.send({
         url: urlData,
-        hash: btoa(doc._id),
+        hash: btoa(searchUrlEntry._id),
         status: 200,
         statusTxt: "OK"
       });
     } else {
       console.log("entry NOT found in db, saving new");
-      let url = new URLs({
+      console.log("urlData: ", urlData);
+      let url = await new URLs({
         url: urlData
-      });
-      url.save(function(err) {
-        if (err) return console.error(err);
-        res.send({
-          url: urlData,
-          hash: btoa(url._id),
-          status: 200,
-          statusTxt: "OK"
-        });
+      }).save();
+      res.send({
+        url: urlData,
+        hash: btoa(url._id),
+        status: 200,
+        statusTxt: "OK"
       });
     }
-  });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get("/:hash", async function(req, res, next) {
