@@ -59,9 +59,9 @@ describe("Urls", () => {
 
     const response = await request(app)
       .get("/MTAwMDA=")
-      .redirects(2);
-    expect(response.status).toEqual(200);
-    expect(response.header.location).toEqual("http://google.com");
+      .redirects(1);
+    expect(response.status).toEqual(302);
+    expect(response.header["location"]).toContain("google.com");
   });
 
   afterAll(async () => {
